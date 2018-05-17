@@ -18,7 +18,7 @@ module.exports.handler = co.wrap(function* (event, context, callback) {
   let namespace        = message.Trigger.Namespace;
   let metricName       = message.Trigger.MetricName;
   let tableName        = message.Trigger.Dimensions[0].value;
-  let utilizationLevel = parseInt(tableName.substring(tableName.lastIndexOf("_") + 1)) / 100;
+  let utilizationLevel = .03;
   let threshold        = message.Trigger.Threshold;
 
   let maxReqsCount  = yield getMaxReqsCount(namespace, metricName, tableName);
@@ -26,7 +26,7 @@ module.exports.handler = co.wrap(function* (event, context, callback) {
   let newThreshold  = newThroughput * 60 * utilizationLevel;
 
   console.log(`
-    Alarm Bame: ${alarmName}
+    Alarm Name: ${alarmName}
     Metric
       Namespace: ${namespace}
       Metric Name: ${metricName}
@@ -38,10 +38,26 @@ module.exports.handler = co.wrap(function* (event, context, callback) {
   `);
 
   if (newThroughput) {
-    yield dynamodb.updateThroughput(tableName, newThroughput);
-    yield cloudwatch.cloneAndPutMetricAlarm(
-      alarmName,
-      x => x.Threshold = newThreshold);
+
+      if (alarmName.includes("ReadCapacity"))
+      {
+
+        yield dynamodb.updateReadThroughput(tableName, newThroughput);
+        yield cloudwatch.cloneAndPutMetricAlarm(
+          alarmName,
+          x => x.Threshold = newThreshold);
+      }
+
+      if (alarmName.includes("WriteCapacity"))
+      {
+        yield dynamodb.updateWriteThroughput(tableName, newThroughput);
+        yield cloudwatch.cloneAndPutMetricAlarm(
+          alarmName,
+          x => x.Threshold = newThreshold);
+        
+      }
+      
+      
   }
 
   yield cloudwatch.setAlarmToOK(alarmName);

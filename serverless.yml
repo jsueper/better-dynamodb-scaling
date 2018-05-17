@@ -2,9 +2,13 @@ service: better-dynamodb-scaling
 
 provider:
   name: aws
+  region: 'us-west-2'
+  stage: ${opt:stage, 'dev'}
   runtime: nodejs6.10
-  stage: dev
-  region: us-east-1
+  logRetentionInDays: 14
+  tracing: true
+  deploymentBucket:
+    name: ${self:provider.stage}-${self:provider.region}-nuskin-sls 
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -23,15 +27,23 @@ provider:
     - Effect: Allow
       Action:
         - lambda:InvokeFunction
-      Resource: "arn:aws:lambda:us-east-1:*:function:${self:service}-${opt:stage, self:provider.stage}-*"
+      Resource: "arn:aws:lambda:us-west-2:*:function:${self:service}-${opt:stage, self:provider.stage}-*"
+    - Effect: "Allow"
+      Action:
+        - "xray:PutTraceSegments"
+        - "xray:PutTelemetryRecords"
+      Resource: "*"     
 
 functions:
   scale_up_dynamodb:
     handler: functions/scale_up_dynamodb.handler    
     events:
       - sns:
-          topicName: scale_up_dynamodb
-          displayName: Scale Up DynamoDB table
+          topicName: scale_up_writes_dynamodb
+          displayName: Scale Up DynamoDB table WCU
+      - sns:
+          topicName: scale_up_reads_dynamodb
+          displayName: Scale Up DynamoDB table RCU
 
   generate_linear_load:
     handler: functions/generate_linear_load.handler
@@ -60,3 +72,7 @@ functions:
                 - monitoring.amazonaws.com
               eventName:
                 - PutMetricAlarm
+
+
+plugins:
+  - serverless-plugin-tracing

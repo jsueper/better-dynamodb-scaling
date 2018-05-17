@@ -16,6 +16,7 @@
     "uuid": "^3.1.0"
   },
   "devDependencies": {
-    "serverless": "^1.16.1"
+    "serverless": "^1.16.1",
+    "serverless-plugin-tracing": "^2.0.0"
   }
 }
